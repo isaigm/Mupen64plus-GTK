@@ -80,7 +80,7 @@ static void open_rom(GtkWidget *widget, gpointer *data){
             if (fork() == 0) {
                 execl("/usr/bin/mupen64plus", "64", "/home/isaigm/rom.n64", 0);
             }
-        }
+       }
         g_free (filename);
       }
     gtk_widget_destroy (dialog);

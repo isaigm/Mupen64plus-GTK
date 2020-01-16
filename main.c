@@ -98,15 +98,15 @@ int main(int argc, char **argv)
     gtk_init(&argc, &argv);
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW (window), "Mupen64Plus-GTK");
-    gtk_window_resize(GTK_WINDOW (window), 800, 600);
+    gtk_window_set_default_size(GTK_WINDOW (window), 800, 600);
     gtk_window_set_position(GTK_WINDOW (window), GTK_WIN_POS_CENTER);
     vbox = gtk_vbox_new(FALSE, 0);
     gtk_container_add(GTK_CONTAINER (window), vbox);
     menubar = gtk_menu_bar_new();
     fileMenu = gtk_menu_new();
     fileMi = gtk_menu_item_new_with_label("Archivo");
-    romMi = gtk_menu_item_new_with_label("Escoger ROM");
-    quitMi = gtk_menu_item_new_with_label("Salir");
+    romMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_OPEN, NULL);
+    quitMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, NULL);;
     gtk_menu_item_set_submenu(GTK_MENU_ITEM (fileMi), fileMenu);
     gtk_menu_shell_append(GTK_MENU_SHELL (fileMenu), romMi);
     gtk_menu_shell_append(GTK_MENU_SHELL (fileMenu), quitMi);

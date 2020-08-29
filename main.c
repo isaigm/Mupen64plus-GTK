@@ -2,6 +2,11 @@
 #include <gtk/gtk.h>
 #include <zip.h>
 #include <string.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <pwd.h>
+static char rom[65536];
 static void destroy( GtkWidget *widget,
                      gpointer   data )
 {
@@ -48,37 +53,25 @@ static void open_rom(GtkWidget *widget, gpointer *data){
             g_print("Sin soporte\n");
         }else{
             //Search for the file of given name
-            size_t len = strlen(filename);
-            size_t len_ = 0;
-            for(size_t t = len-1; filename[t] != '/'; t--){
-                len_++;
-            }
-            char *name = malloc(sizeof (char)*(len_+1));
-            for(size_t t = 0; t < len_; t++){
-                name[t] = filename[len - len_ + t];
-            }
-            name[len_ - 1] = '4';
-            name[len_ - 2] = '6';
-            name[len_ - 3] = 'n';
-            g_print("%s\n", name);
+            const char *name = zip_get_name(z, 0, 0);
             struct zip_stat st;
             zip_stat_init(&st);
             zip_stat(z, name, 0, &st);
             //Alloc memory for its uncompressed contents
             char *contents = malloc(sizeof (char) * st.size);
             //Read the compressed file
+            printf("%s\n", name);
             struct zip_file *f = zip_fopen(z, name, 0);
             zip_fread(f, contents, st.size);
             zip_fclose(f);
-            FILE *fp = fopen("/home/isaigm/rom.n64", "w");
+            FILE *fp = fopen(rom, "w");
             fwrite(contents, sizeof (char), st.size, fp);
             fclose(fp);
             //And close the archive
             zip_close(z);
             free(contents);
-            free(name);
             if (fork() == 0) {
-                execl("/usr/bin/mupen64plus", "64", "/home/isaigm/rom.n64", 0);
+                execl("/usr/bin/mupen64plus", "64", rom, 0);
             }
        }
         g_free (filename);
@@ -87,7 +80,9 @@ static void open_rom(GtkWidget *widget, gpointer *data){
 }
 int main(int argc, char **argv)
 {
-
+    struct passwd *pw = getpwuid(getuid());
+    strcpy(rom, pw->pw_dir);
+    strcat(rom, "/rom.n64");
     GtkWidget *window;
     GtkWidget *vbox;
     GtkWidget *menubar;

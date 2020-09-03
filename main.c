@@ -25,7 +25,7 @@ int main(int argc, char **argv)
     strcpy(rom, pw->pw_dir);
     strcat(rom, "/rom.n64");
     gtk_init(&argc, &argv);
-    builder = gtk_builder_new_from_file("/home/isai/gui.glade");
+    builder = gtk_builder_new_from_file("gui.glade");
     window = GTK_WIDGET(gtk_builder_get_object(builder, "window"));
     gtk_builder_connect_signals(builder, NULL);
     fixed = GTK_WIDGET(gtk_builder_get_object(builder, "fixed"));

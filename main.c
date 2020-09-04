@@ -15,9 +15,16 @@ GtkBuilder *builder;
 GtkDialog *cfg;
 GtkTextView *dotcfg;
 GtkTextBuffer *cfgbuff;
+GtkFileFilter *filter;
 void delete_ev(GtkWidget *e)
 {
     gtk_widget_hide_on_delete((GtkWidget *)cfg);
+}
+void quit(GtkWidget *e)
+{
+    g_print("Cerrando...\n");
+    killpg(0, SIGTERM);
+    gtk_main_quit();
 }
 int main(int argc, char **argv)
 {
@@ -25,7 +32,7 @@ int main(int argc, char **argv)
     strcpy(rom, pw->pw_dir);
     strcat(rom, "/rom.n64");
     gtk_init(&argc, &argv);
-    builder = gtk_builder_new_from_file("/home/isai/gui.glade");
+    builder = gtk_builder_new_from_file("gui.glade");
     window = GTK_WIDGET(gtk_builder_get_object(builder, "window"));
     gtk_builder_connect_signals(builder, NULL);
     fixed = GTK_WIDGET(gtk_builder_get_object(builder, "fixed"));
@@ -37,17 +44,16 @@ int main(int argc, char **argv)
     GtkWidget *cancel = gtk_dialog_add_button(cfg, "Cancelar", GTK_RESPONSE_CANCEL);
     gtk_window_set_transient_for((GtkWindow *)cfg, (GtkWindow *)window);
     cfgbuff = gtk_text_view_get_buffer(dotcfg);
-    g_signal_connect(window, "destroy", gtk_main_quit, NULL);
+    filter = gtk_file_filter_new();
+    gtk_file_filter_add_pattern(filter, "*.[zZ][iI][pP]");
+    gtk_file_filter_add_pattern(filter, "*.[nN][6][4]");
+    gtk_file_filter_add_pattern(filter, "*.[zZ][6][4]");
+    gtk_file_filter_set_name(filter, "N64 ROMs");
+    g_signal_connect(window, "destroy", G_CALLBACK(quit), NULL);
     g_signal_connect(cfg, "delete-event", G_CALLBACK(delete_ev), NULL);
     gtk_widget_show(window);
     gtk_main();
     return 0;
-}
-void quit(GtkWidget *e)
-{
-    g_print("Cerrando...\n");
-    killpg(0, SIGTERM);
-    gtk_main_quit();
 }
 void on_editcfg_activate(GtkWidget *e)
 {
@@ -100,18 +106,21 @@ void open_rom(GtkWidget *e)
                                          GTK_RESPONSE_ACCEPT,
                                          NULL);
 
+    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
     res = gtk_dialog_run(GTK_DIALOG(dialog));
     if (res == GTK_RESPONSE_ACCEPT)
     {
         char *filename;
-        GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
-        filename = gtk_file_chooser_get_filename(chooser);
+        filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
         //Open the ZIP archive
         int err = 0;
         struct zip *z = zip_open(filename, 0, &err);
         if (err == ZIP_ER_NOZIP)
         {
-            g_print("Sin soporte\n");
+            if (fork() == 0)
+            {
+                execl("/usr/bin/mupen64plus", "64", filename, 0);
+            }
         }
         else
         {

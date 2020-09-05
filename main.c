@@ -6,7 +6,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <pwd.h>
-
+#include <gdk/gdkwayland.h>
 char rom[0xFFFF];
 struct passwd *pw;
 GtkWidget *window;
@@ -15,9 +15,10 @@ GtkBuilder *builder;
 GtkDialog *cfg;
 GtkTextView *dotcfg;
 GtkTextBuffer *cfgbuff;
+GtkMenuBar *menubar;
 void delete_ev(GtkWidget *e)
 {
-    gtk_widget_hide_on_delete((GtkWidget *)cfg);
+    gtk_widget_hide_on_delete(GTK_WIDGET(cfg));
 }
 void quit(GtkWidget *e)
 {
@@ -25,8 +26,13 @@ void quit(GtkWidget *e)
     killpg(0, SIGTERM);
     gtk_main_quit();
 }
+void watch_func(GPid pid, gint status, gpointer user_data){
+    gtk_widget_set_sensitive(GTK_WIDGET(menubar), TRUE);
+    g_spawn_close_pid(pid);
+}
 int main(int argc, char **argv)
 {
+
     pw = getpwuid(getuid());
     strcpy(rom, pw->pw_dir);
     strcat(rom, "/rom.n64");
@@ -37,11 +43,12 @@ int main(int argc, char **argv)
     fixed = GTK_WIDGET(gtk_builder_get_object(builder, "fixed"));
     cfg = GTK_DIALOG(gtk_builder_get_object(builder, "cfg"));
     dotcfg = GTK_TEXT_VIEW(gtk_builder_get_object(builder, "dotcfg"));
-    gtk_window_set_title((GtkWindow *)window, "Mupen64plus-GTK");
-    gtk_window_set_title((GtkWindow *)cfg, "Editor de configuraciones");
+    menubar = GTK_MENU_BAR(gtk_builder_get_object(builder, "menubar"));
+    gtk_window_set_title(GTK_WINDOW(window), "Mupen64plus-GTK");
+    gtk_window_set_title(GTK_WINDOW(cfg), "Editor de configuraciones");
     GtkWidget *save = gtk_dialog_add_button(cfg, "Guardar", GTK_RESPONSE_ACCEPT);
     GtkWidget *cancel = gtk_dialog_add_button(cfg, "Cancelar", GTK_RESPONSE_CANCEL);
-    gtk_window_set_transient_for((GtkWindow *)cfg, (GtkWindow *)window);
+    gtk_window_set_transient_for(GTK_WINDOW(cfg), GTK_WINDOW(window));
     cfgbuff = gtk_text_view_get_buffer(dotcfg);
     GtkImage *bg = GTK_IMAGE(gtk_builder_get_object(builder, "bg"));
     gtk_image_set_from_file(bg, "icon.png");
@@ -64,13 +71,13 @@ void on_editcfg_activate(GtkWidget *e)
     if (fpr == NULL)
     {
         GtkDialogFlags flags = GTK_DIALOG_DESTROY_WITH_PARENT;
-        GtkWidget *dialog = gtk_message_dialog_new (GTK_WINDOW(window),
-                                         flags,
-                                         GTK_MESSAGE_ERROR,
-                                         GTK_BUTTONS_CLOSE,
-                                         "Error reading: %s",
-                                         filename);
-        gtk_dialog_run(GTK_DIALOG (dialog));
+        GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(window),
+                                                   flags,
+                                                   GTK_MESSAGE_ERROR,
+                                                   GTK_BUTTONS_CLOSE,
+                                                   "Error reading: %s",
+                                                   filename);
+        gtk_dialog_run(GTK_DIALOG(dialog));
         gtk_widget_destroy(dialog);
         free(filename);
         return;
@@ -93,13 +100,9 @@ void on_editcfg_activate(GtkWidget *e)
         fprintf(fpw, "%s", text);
         fclose(fpw);
     }
-    else if (res == GTK_RESPONSE_CANCEL)
-    {
-        g_print("ignore\n");
-    }
     fclose(fpr);
     free(filename);
-    gtk_widget_hide((GtkWidget *)cfg);
+    gtk_widget_hide(GTK_WIDGET(cfg));
 }
 void open_rom(GtkWidget *e)
 {
@@ -121,16 +124,14 @@ void open_rom(GtkWidget *e)
     if (res == GTK_RESPONSE_ACCEPT)
     {
         char *filename;
+        char *which;
         filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
         //Open the ZIP archive
         int err = 0;
         struct zip *z = zip_open(filename, 0, &err);
         if (err == ZIP_ER_NOZIP)
         {
-            if (fork() == 0)
-            {
-                execl("/usr/bin/mupen64plus", "64", filename, 0);
-            }
+            which = filename;
         }
         else
         {
@@ -151,11 +152,13 @@ void open_rom(GtkWidget *e)
             //And close the archive
             zip_close(z);
             free(contents);
-            if (fork() == 0)
-            {
-                execl("/usr/bin/mupen64plus", "64", rom, 0);
-            }
+            which = rom;
         }
+        char *argv [] = {"mupen64plus", which, NULL};
+        GPid pid;
+        g_spawn_async(NULL, (gchar **)argv, NULL, G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_DO_NOT_REAP_CHILD , NULL, NULL, &pid, NULL);
+        gtk_widget_set_sensitive(GTK_WIDGET(menubar), FALSE);
+        g_child_watch_add(pid, watch_func, NULL);
         g_free(filename);
     }
     gtk_widget_destroy(dialog);

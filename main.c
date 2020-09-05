@@ -63,7 +63,15 @@ void on_editcfg_activate(GtkWidget *e)
     fpr = fopen(filename, "r");
     if (fpr == NULL)
     {
-        printf("No existe el archivo %s", filename);
+        GtkDialogFlags flags = GTK_DIALOG_DESTROY_WITH_PARENT;
+        GtkWidget *dialog = gtk_message_dialog_new (GTK_WINDOW(window),
+                                         flags,
+                                         GTK_MESSAGE_ERROR,
+                                         GTK_BUTTONS_CLOSE,
+                                         "Error reading: %s",
+                                         filename);
+        gtk_dialog_run(GTK_DIALOG (dialog));
+        gtk_widget_destroy(dialog);
         free(filename);
         return;
     }
@@ -99,7 +107,7 @@ void open_rom(GtkWidget *e)
     GtkFileFilter *filter;
 
     gint res;
-    dialog = gtk_file_chooser_dialog_new("Abrir ROM", (GtkWindow *)window, GTK_FILE_CHOOSER_ACTION_OPEN, ("Cancelar"), GTK_RESPONSE_CANCEL,
+    dialog = gtk_file_chooser_dialog_new("Abrir ROM", GTK_WINDOW(window), GTK_FILE_CHOOSER_ACTION_OPEN, ("Cancelar"), GTK_RESPONSE_CANCEL,
                                          ("Abrir"),
                                          GTK_RESPONSE_ACCEPT,
                                          NULL);

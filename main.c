@@ -15,7 +15,6 @@ GtkBuilder *builder;
 GtkDialog *cfg;
 GtkTextView *dotcfg;
 GtkTextBuffer *cfgbuff;
-GtkFileFilter *filter;
 void delete_ev(GtkWidget *e)
 {
     gtk_widget_hide_on_delete((GtkWidget *)cfg);
@@ -36,19 +35,16 @@ int main(int argc, char **argv)
     window = GTK_WIDGET(gtk_builder_get_object(builder, "window"));
     gtk_builder_connect_signals(builder, NULL);
     fixed = GTK_WIDGET(gtk_builder_get_object(builder, "fixed"));
-    cfg = (GtkDialog *)GTK_WIDGET(gtk_builder_get_object(builder, "cfg"));
-    dotcfg = (GtkTextView *)GTK_WIDGET(gtk_builder_get_object(builder, "dotcfg"));
+    cfg = GTK_DIALOG(gtk_builder_get_object(builder, "cfg"));
+    dotcfg = GTK_TEXT_VIEW(gtk_builder_get_object(builder, "dotcfg"));
     gtk_window_set_title((GtkWindow *)window, "Mupen64plus-GTK");
     gtk_window_set_title((GtkWindow *)cfg, "Editor de configuraciones");
     GtkWidget *save = gtk_dialog_add_button(cfg, "Guardar", GTK_RESPONSE_ACCEPT);
     GtkWidget *cancel = gtk_dialog_add_button(cfg, "Cancelar", GTK_RESPONSE_CANCEL);
     gtk_window_set_transient_for((GtkWindow *)cfg, (GtkWindow *)window);
     cfgbuff = gtk_text_view_get_buffer(dotcfg);
-    filter = gtk_file_filter_new();
-    gtk_file_filter_add_pattern(filter, "*.[zZ][iI][pP]");
-    gtk_file_filter_add_pattern(filter, "*.[nN][6][4]");
-    gtk_file_filter_add_pattern(filter, "*.[zZ][6][4]");
-    gtk_file_filter_set_name(filter, "N64 ROMs");
+    GtkImage *bg = GTK_IMAGE(gtk_builder_get_object(builder, "bg"));
+    gtk_image_set_from_file(bg, "icon.png");
     g_signal_connect(window, "destroy", G_CALLBACK(quit), NULL);
     g_signal_connect(cfg, "delete-event", G_CALLBACK(delete_ev), NULL);
     gtk_widget_show(window);
@@ -100,12 +96,18 @@ void on_editcfg_activate(GtkWidget *e)
 void open_rom(GtkWidget *e)
 {
     GtkWidget *dialog;
+    GtkFileFilter *filter;
+
     gint res;
     dialog = gtk_file_chooser_dialog_new("Abrir ROM", (GtkWindow *)window, GTK_FILE_CHOOSER_ACTION_OPEN, ("Cancelar"), GTK_RESPONSE_CANCEL,
                                          ("Abrir"),
                                          GTK_RESPONSE_ACCEPT,
                                          NULL);
-
+    filter = gtk_file_filter_new();
+    gtk_file_filter_add_pattern(filter, "*.[zZ][iI][pP]");
+    gtk_file_filter_add_pattern(filter, "*.[nN][6][4]");
+    gtk_file_filter_add_pattern(filter, "*.[zZ][6][4]");
+    gtk_file_filter_set_name(filter, "N64 ROMs");
     gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
     res = gtk_dialog_run(GTK_DIALOG(dialog));
     if (res == GTK_RESPONSE_ACCEPT)
